@@ -1,16 +1,4 @@
-# **CSE 234: Machine Learning Systems - PA 1**
-
-Welcome to the first PA of CSE234 - Winter 2025!
-
-This assignment solely requires Python programming; no C++ coding is involved. Make sure to refer to the final section of this notebook for details on how to submit your assignment.
-
-Avoid posting your completed work on any public platforms (such as GitHub). This assignment must be completed individually and is not intended for group work.
-
-No GPU is needed for this assignment. You can use this notebook on CoLab to develop.
-
-### **Testing and Grading**
-
-We have provided a suite of public test scripts located in the tests/ directory that you can use to verify your implementation. Additionally, your assignment will be evaluated using a series of private tests. The marks you receive for each section will depend on how many of these private tests your code passes. You are allowed to submit your assignment multiple times, but only the last submission will be considered for grading after the deadline. This implies that your scores will not be immediately visible post-submission. We suggest writing your own test scripts to ensure your code functions correctly.
+# **Automatic Differentiation and Tiny Transformer**
 
 ## **Overview**
 
@@ -238,13 +226,6 @@ Complete the `compute()` and `gradient()` methods in the `MatMulSoftmaxOp` class
 * Apply softmax along the specified dimension
 * Compute correct gradients for backpropagation
 
-### Task 3: Writeup (5 pt)
-
-Create a text file with the name part3.txt that gives us a one to two paragraph explanation about:
-
-* the intuition behind fused operators
-* why it works for improving efficiency
-* potential future improvements to these operators
 
 ### Testing
 
@@ -257,13 +238,3 @@ To run our sample testing library, you can use the commands:
 To test the speed/performance compared to unfused operators
 
 `python tests/test_fused_ops_perf.py`
-
-## Submission
-
-Congratulations, you have finished PA1!
-
-We ask you to submit the entire CSE234-W25-PA1 folder as a zipped folder to Gradescope under the assignment 'PA1'. This includes all test files and any additional tests you may have written. Submission is due **Sunday, 2/9 at 11:59 PM.**
-
-Please note that you have a total of **5 free late days** across all assignments. This means that you can choose to allocate these 5 free late days towards any assignments you choose, but you will not earn credit if your assignment is later than 5 days (without special request). So please turn your assignments in on time!
-
-As this is our first time running this specific PA1, if you have any feedback for the difficulty of this assignment, feel free to leave it in the `feedback.txt` file. Any responses will be much appreciated!
