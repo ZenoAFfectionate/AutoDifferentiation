@@ -369,7 +369,7 @@ class ExpandAsOp3d(Op):
         """Return the broadcasted tensor."""
         assert len(input_values) == 2
         input_tensor, target_tensor = input_values
-        print('expand_op', input_tensor.shape, target_tensor.shape)
+        # print('expand_op', input_tensor.shape, target_tensor.shape)
         return input_tensor.unsqueeze(1).expand_as(target_tensor)
 
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
@@ -398,6 +398,13 @@ class LogOp(Op):
 
 
 class BroadcastOp(Op):
+    """
+    Op to broadcast a tensor to the shape of another tensor.
+    
+    Note: This is a reference implementation for BroadcastOp.
+          If it does not work in your case, you can modify it.
+    """
+
     def __call__(self, node_A: Node, input_shape: List[int], target_shape: List[int]) -> Node:
         return Node(
             inputs=[node_A],
@@ -455,8 +462,8 @@ class DivOp(Op):
     
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """Given gradient of division node, return partial adjoints to each input."""
-        lhs, rhs = node.inputs[0], node.inputs[1]
-        return [div(output_grad, rhs), mul_by_const(div(mul(output_grad, lhs), mul(rhs, rhs)), -1.0)]
+        rhs = node.inputs[1]  # use node(=lhs/rhs) to avoid recomputing lhs/rhs
+        return [div(output_grad, rhs), mul_by_const(div(mul(output_grad, node), rhs), -1.0)]
 
 class DivByConstOp(Op):
     """Op to element-wise divide a nodes by a constant."""
@@ -565,7 +572,7 @@ class SoftmaxOp(Op):
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """Given gradient of softmax node, return partial adjoint to input."""
         sum_y_grad = sum_op(mul(node, output_grad), dim=node.attrs["dim"], keepdim=True)
-        return [mul(node, output_grad - sum_y_grad)]
+        return [mul(node, sub(output_grad, sum_y_grad))]
 
 
 # ==================================================== #
@@ -597,19 +604,21 @@ class LayerNormOp(Op):
         adjoint (gradient) wrt the input x.
         """
         x = node.inputs[0]
+        eps = node.attrs['eps']
         nd = len(node.attrs['normalized_shape'])
         dim = tuple(range(-nd, 0)) if nd > 0 else None
+        
         # compute mean and variance
         m = mean(x, dim=dim, keepdim=True)
-        v = mean(power(x - m, 2), dim=dim, keepdim=True)
-        # get standardized input
-        std = power(add_by_const(v, node.attrs['eps']), 0.5)
-        x_hat = div(x - m, std)
-        # compute terms concerning gradient
+        v = mean(power(sub(x, m), 2), dim=dim, keepdim=True)
+        std = power(add_by_const(v, eps), 0.5)
+        
+        x_hat = node  # x_hat = (x - m) / std = node
+        
         g_m = mean(output_grad, dim=dim, keepdim=True)
         g_hat_m = mean(mul(output_grad, x_hat), dim=dim, keepdim=True)
-        # compute gradient and return
-        return [div(output_grad - g_m - mul(x_hat, g_hat_m), std)]
+        # gradient = (output_grad - g_m - x_hat * g_hat_m) / std
+        return [div(sub(sub(output_grad, g_m), mul(x_hat, g_hat_m)), std)]
 
 
 class ReLUOp(Op):
@@ -841,8 +850,10 @@ def gradients(output_node: Node, nodes: List[Node]) -> List[Node]:
         A list of gradient nodes, one for each input nodes respectively.
     """
     # find all nodes reachable from output_node
-    visited = set(); stack = [output_node]; all_nodes = []
-
+    visited = set()
+    all_nodes = []
+    
+    stack = [output_node]
     while stack:
         node = stack.pop()
         if node in visited:

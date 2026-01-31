@@ -346,7 +346,7 @@ def train_model():
         predictions = np.argmax(concatenated_logits, axis=1)
         return predictions
 
-    # Train the model.
+    # prepare data and initialize model weights:
     X_train, X_test, y_train, y_test= torch.tensor(X_train), torch.tensor(X_test), torch.DoubleTensor(y_train), torch.DoubleTensor(y_test)
     model_weights: List[torch.Tensor] = [
         torch.DoubleTensor(W_Q_val),
@@ -358,6 +358,8 @@ def train_model():
         torch.DoubleTensor(b_1_val),
         torch.DoubleTensor(b_2_val),
     ]
+
+    # Train the model using SGD
     for epoch in range(num_epochs):
         X_train, y_train = shuffle(X_train, y_train)
         model_weights, loss_val = sgd_epoch(

@@ -7,10 +7,10 @@ class MatMulLayerNormOp(Op):
     """Fused matrix multiplication and layer normalization operation."""
 
     def __call__(
-        self, 
-        node_A: Node, 
-        node_B: Node, 
-        normalized_shape: List[int], 
+        self,
+        node_A: Node,
+        node_B: Node,
+        normalized_shape: List[int],
         eps: float = 1e-5
     ) -> Node:
         """
@@ -34,32 +34,31 @@ class MatMulLayerNormOp(Op):
         """Return the fused matmul and layer normalization result."""
         assert len(input_values) == 2
         return torch.layer_norm(
-            input_values[0] @ input_values[1], 
-            normalized_shape=node.attrs["normalized_shape"], 
+            input_values[0] @ input_values[1],
+            normalized_shape=node.attrs["normalized_shape"],
             eps=node.attrs["eps"]
         )
 
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """Given gradient of fused node, return partial adjoints to each input."""
-        # compute the forward pass result we need for layernorm gradient
-        x = matmul(node.inputs[0], node.inputs[1])
         # ==========================================
         # compute gradient with respect to layernorm
         # ==========================================
         nd = len(node.attrs['normalized_shape'])
         dim = tuple(range(-nd, 0)) if nd > 0 else None
+        eps = node.attrs['eps']
 
-        # compute mean and variance
-        m = mean(x, dim=dim, keepdim=True)
-        v = mean(power(x - m, 2), dim=dim, keepdim=True)
-        # get standardized input
-        std = power(add_by_const(v, node.attrs['eps']), 0.5)
-        x_hat = div(x - m, std)
+        x_hat = node  # use node output to compute std directly
+        mean_x_hat_square = mean(power(x_hat, 2), dim=dim, keepdim=True)
+        one_minus = sub(ones_like(mean_x_hat_square), mean_x_hat_square)
+        # std = sqrt(eps / (1 - mean(x_hat²)))
+        std = power(mul_by_const(power(one_minus, -1), eps), 0.5)
+
         # compute terms concerning gradient
         g_m = mean(output_grad, dim=dim, keepdim=True)
         g_hat_m = mean(mul(output_grad, x_hat), dim=dim, keepdim=True)
-        # compute gradient with respect to forward result
-        gradient = div(output_grad - g_m - mul(x_hat, g_hat_m), std)
+        # use sub() instead of - operator to create fewer nodes
+        gradient = div(sub(sub(output_grad, g_m), mul(x_hat, g_hat_m)), std)
 
         # =======================================
         # combine gradient with respect to matmul
@@ -74,9 +73,9 @@ class MatMulSoftmaxOp(Op):
     """Fused matrix multiplication and softmax operation."""
 
     def __call__(
-        self, 
-        node_A: Node, 
-        node_B: Node, 
+        self,
+        node_A: Node,
+        node_B: Node,
         dim: int = -1
     ) -> Node:
         return Node(
@@ -95,13 +94,13 @@ class MatMulSoftmaxOp(Op):
 
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """Given gradient of fused node, return partial adjoints to each input."""
-        # First compute the forward pass result we need for softmax gradient
-        x = matmul(node.inputs[0], node.inputs[1])
+        y = node
         # ========================================
         # compute gradient with respect to softmax
         # ========================================
-        sum_y_grad = sum_op(mul(x, output_grad), dim=node.attrs["dim"], keepdim=True)
-        gradient = mul(x, output_grad - sum_y_grad)
+        sum_y_grad = sum_op(mul(y, output_grad), dim=node.attrs["dim"], keepdim=True)
+        gradient = mul(y, sub(output_grad, sum_y_grad))
+
         # =======================================
         # combine gradient with respect to matmul
         # =======================================
