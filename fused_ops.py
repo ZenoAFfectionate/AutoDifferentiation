@@ -98,7 +98,8 @@ class MatMulSoftmaxOp(Op):
         # ========================================
         # compute gradient with respect to softmax
         # ========================================
-        sum_y_grad = sum_op(mul(y, output_grad), dim=node.attrs["dim"], keepdim=True)
+        sum_y_grad = sum_op(mul(y, output_grad),
+                            dim=node.attrs["dim"], keepdim=True)
         gradient = mul(y, sub(output_grad, sum_y_grad))
 
         # =======================================

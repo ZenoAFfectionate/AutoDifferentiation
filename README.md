@@ -369,7 +369,7 @@ pytest tests/test_auto_diff_graph_backward.py
 
 # Test fused operations
 pytest tests/test_fused_ops.py
-python tests/test_fused_ops_perf.py  # Performance comparison
+python tests/test_fused_ops_perf.py
 ```
 
 ### Training the Transformer

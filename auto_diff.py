@@ -1,4 +1,3 @@
-from platform import node
 from typing import Any, Dict, List
 
 import torch
@@ -74,7 +73,7 @@ class Node:
     def __getattr__(self, attr_name: str) -> Any:
         if attr_name in self.attrs:
             return self.attrs[attr_name]
-        raise KeyError(f"Attribute {attr_name} does not exist in node {self}")
+        raise AttributeError(f"Attribute {attr_name} does not exist in node {self}")
 
     __repr__ = __str__
 
@@ -349,8 +348,8 @@ class ExpandAsOp(Op):
 
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """Given the gradient of the broadcast node, compute partial adjoint to input."""
-        return [sum_op(output_grad, dim=0), zeros_like(output_grad)]
-    
+        return [sum_op(output_grad, dim=0), zeros_like(node.inputs[1])]
+
 class ExpandAsOp3d(Op):
     """Op to broadcast a tensor to the shape of another tensor.
     
@@ -374,7 +373,7 @@ class ExpandAsOp3d(Op):
 
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """Given the gradient of the broadcast node, compute partial adjoint to input."""
-        return [sum_op(output_grad, dim=(0, 1)), zeros_like(output_grad)]
+        return [sum_op(output_grad, dim=(0, 1)), zeros_like(node.inputs[1])]
 
 
 class LogOp(Op):
